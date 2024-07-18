@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Animation test</title>
+		<meta charset="utf-8">
+		<meta name="view Window" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #bfe3dd;
+				color: #000;
+			}
+			a {
+				color: #2983ff;
+			}
+			button{
+				position: fixed;
+				z-index: 10;
+				height: 20px;
+			}
+		</style>
+	</head>
+	<button onclick="displayControl(1)" style="top: 5px;"> CrossBow Animation </button>
+	<button onclick="displayControl(2)" style="top: 50px;"> WaterWheel Animation </button>
+	<button onclick="displayControl(3)" style="top: 90px;"> WindMill Animation </button>
+
+	<div id="container"></div>
+
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+		<script>
+			var stopflag=0;
+			function displayControl(op){
+				stopflag = stopflag^(1<<op);
+			}
+		</script>
+
+		<script type="module">
+
+			import * as THREE from 'three';
+
+			import Stats from 'three/addons/libs/stats.module.js';
+
+			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+			import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+			import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+
+			let mixer_1;
+			let mixer_2;
+			let mixer_3;
+			var scale=0.35;
+
+			const clock = new THREE.Clock();
+			const container = document.getElementById( 'container' );
+
+			const renderer = new THREE.WebGLRenderer( { antialias: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.outputEncoding = THREE.sRGBEncoding;
+			container.appendChild( renderer.domElement );
+
+			const pmremGenerator = new THREE.PMREMGenerator( renderer );
+
+			const scene = new THREE.Scene();
+			scene.background = new THREE.Color( 0xbfe3dd );
+			scene.environment = pmremGenerator.fromScene( new RoomEnvironment(), 0.04 ).texture;
+
+			const camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 100 );
+			camera.position.set( 5, 2, 8 );
+
+			const controls = new OrbitControls( camera, renderer.domElement );
+			controls.target.set( 0, 0.5, 0 );
+			controls.update();
+			controls.enablePan = false;
+			controls.enableDamping = true;
+
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath( 'jsm/libs/draco/gltf/' );
+
+			const loader = new GLTFLoader();
+			loader.setDRACOLoader( dracoLoader );
+			loader.load( 'test.glb', function ( gltf ) {
+				const model = gltf.scene;
+				model.position.set( 1, 1, 0 );
+				model.scale.set(scale,scale,scale);
+				scene.add( model );
+
+				mixer_1 = new THREE.AnimationMixer( model );
+				mixer_2 = new THREE.AnimationMixer( model );
+				mixer_3 = new THREE.AnimationMixer( model );
+				const anime_1 = gltf.animations[0].clone();
+				anime_1.tracks.splice(-2);
+				const anime_2 = gltf.animations[0].clone();
+				anime_2.tracks.splice(-1);
+				anime_2.tracks.splice(0,4);
+				const anime_3 = gltf.animations[0].clone();
+				anime_3.tracks.splice(0,5);
+
+				
+				mixer_1.clipAction(anime_1).play();
+				mixer_2.clipAction(anime_2).play();
+				mixer_3.clipAction(anime_3).play();
+				
+				animate();
+
+			}, undefined, function ( e ) {
+				console.error( e );
+			} );
+
+
+			window.onresize = function () {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			};
+
+
+			function animate() {
+				requestAnimationFrame( animate );
+				const delta = clock.getDelta();
+				if(stopflag&(1<<1)){
+					mixer_1.update( delta );
+				}
+				if(stopflag&(1<<2)){
+					mixer_2.update( delta );
+				}
+				if(stopflag&(1<<3)){
+					mixer_3.update( delta );
+				}
+				controls.update();
+				renderer.render( scene, camera );
+			}
+
+		</script>
+</html>
